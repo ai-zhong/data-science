@@ -1,0 +1,364 @@
+---
+title: "R programming for data science-notes"
+author: "Ai Zhong"
+date: "8/15/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Five Basic or 'Atomic' Classes of Objects
+* character
+* numeric (real numbers)
+* integer
+* complex
+* logical (True/False)
+
+The most basic type of R object is a vector.  
+To create an empty vector, use <span style="color:blue">*vector( )*</span> function, or use <span style="color:blue">*c( )*</span> function by concatenation.  
+**A vector can only contain objects of the same class.**  
+*Note: A list is represented as a vector, but can have objects of different classes*
+
+### Numbers
+If you want an integer, specify L suffix. eg: 1 is numeric, 1L is integer.
+
+### Attributes
+Attributes of an object can be accessed using <span style="color:blue">*attributes( )*</span> function.  
+Not all R objects contain attributes.
+
+### Explicit Coercion
+Objects can be explicitly coerced from one class to another using the <span style="color:blue">*'as.\*'*</span> function.
+*Note: to convert a datafram to matrix, use 'data.matrix( )'*.  
+```{r}
+x<-0:6
+x
+class(x)
+as.character(x)
+class(as.character(x))
+```
+
+### Matrices
+Matrices are constructed *column-wise*. And matrices must have all element of the same class.  
+```{r}
+m<-matrix(1:6,nrow=2,ncol=3)
+m
+```
+Matrices can also be created directly from vectors by adding a dimension attribute.  
+```{r}
+m<-1:10
+dim(m)<-c(2,5)
+m
+```
+Or Matrices can be created by row-binding <span style="color:blue">*rbind( )*</span> and column-binding <span style="color:blue">*cbind( )*</span>.  
+```{r}
+x<-1:3
+y<-10:12
+cbind(x,y)
+rbind(x,y)
+```
+### List Creation
+```{r}
+x<-list(1,'a',TRUE,1+4i)
+x
+
+y<-vector('list',length=2)
+y
+```
+### Factors
+Factors: an integer vector where each integer has a *label*.  
+Factors can be created with *factor( )* function.
+```{r}
+x<-factor(c('yes','yes','no','yes','no'))
+x ## Levels are put in alphabetical order
+table(x)
+## to specify the level order:
+y<-factor(c('yes','yes','no','yes','no'), levels=c('yes','no'))
+y
+table(y)
+```
+When you use *read.table( )*, usually factors is auto created for the dataset with characters or strings.  
+
+## Missing Values
+A *NaN* value is a type of *NA* but the converse is false.  
+Use *is.na( )* and *is.nan( )* to test for missing values.
+
+## Data Frames
+Reading in datasets by *'read.table( )' and 'read.csv( )'* are usually dataframes. Or you can generate dataframe using *'data.frame( )'* function.  
+```{r}
+x<-data.frame(foo=1:4,bar=c(T,T,F,F))
+x
+```
+### Names
+**Summary:**  
+
+Object     | Set column names | Set row names |
+---------- | ---------------- |-------------- |
+data frame | names( )         | row.names( )  |
+matrix     | colnames( )      | rownames( )   |
+
+## Subsetting R Object
+### Subsetting a Vector
+
+* '[' operator: return an object of the same class as the original. Can select multiple objects.  
+* '[[' operator: extract elements of a list or a dataframe. Single element only, and may not be a list or dataframe.  
+* '$' operator: extract elements of a list or dataframe by literal name. similar to '[['.  
+
+Some Interesting Examples:  
+```{r}
+x<-c('a','b','c','c','d','a')
+u<- x>'a'
+u
+x[u]
+# or in a more compact way:
+x[x>'a']
+```
+### Subsetting a Matrix
+By default the extracted single element of matrix is returned as a vector of length 1, not a 1x1 matrix. This can be turned off by setting *'drop=FALSE'*.
+```{r}
+x<-matrix(1:6,2,3)
+x[1,2]
+x[1,2,drop=FALSE]
+```
+### Subsetting Lists
+
+```{r}
+x<-list(foo=1:4, bar=0.6)
+x$foo # or x$bar
+x[[1]] # or x[['foo']]
+```
+**Note: '[[' operator can be used with computed indices, '$' can only be used with literal names.**  
+**Subsetting Nested Elements of a List**  
+```{r}
+x<-list(a=list(10,12,14), b=c(3.14,2.81), c=c('a','b'))
+# get the 3rd element of the 1st element:
+x[[c(1,3)]] 
+x[[1]][[3]]
+# use of '[' operator to extract multiple elements from a list:
+x[c(1,3)] # get $a and $c from x
+```
+### Removing NA Values
+Some Typical Examples:  
+1.
+```{r}
+x<-c(1,2,NA,4,NA,5)
+bad<-is.na(x)
+x[!bad]
+```
+2.  
+```{r}
+x<-c(1,2,NA,4,NA,5,NA)
+y<-c('a','b',NA,'d',NA,'f','e')
+# note: x and y must be of the same length, and the value will follow x
+# check limitations: ?complete.cases
+good<-complete.cases(x,y)
+good
+x[good]
+y[good]
+```
+## dplyr Package
+Import the library  
+```{r}
+library(dplyr)
+chicago<-readRDS('~/Desktop/StatswR/R Programming-JHU/chicago')
+dim(chicago)
+names(chicago)
+```
+####Select( )
+**Use *'select( )'* to get the first 3 columns**
+```{r}
+subset<-select(chicago, city:dptp)
+subset_neg<-select(chicago,-(city:dptp))
+# equivalent code in base R would be:
+# i<-match('city',names(chicago))
+# j<-match('dptp',names(chicago))
+# head(chicago[,-(i:j)],2)
+head(subset,2)
+head(subset_neg,2)
+```
+*Select( )* function also allows a special syntax that allows you to specify variable names based on patterns.  
+Example:
+```{r}
+subset<-select(chicago,ends_with('2')) # or: starts_with('d')
+str(subset)
+```
+#### Filter( )
+Used to extract subsets of rows from a dataframe. Faster than *subset( )* in base R.  
+```{r}
+chic.f <- filter(chicago,pm25tmean2>30)
+chic.f2 <- filter(chicago, pm25tmean2 > 30 & tmpd > 80)
+str(chic.f)
+```
+```{r}
+summary(chic.f$pm25tmean2)
+```
+#### Arrange( )
+Used to reorder rows of a dataframe according to one of the variables/columns.  
+Ascending order
+```{r}
+chicago<-arrange(chicago,date)
+head(select(chicago, date, pm25tmean2),3)
+tail(select(chicago, date, pm25tmean2),3)
+```
+Or descending order:
+```{r}
+chicago2<-arrange(chicago,desc(date))
+head(select(chicago2, date, pm25tmean2), 3)
+```
+#### rename( )
+Note: in base R, use names() to find column name first and then assign the desired new name to that element.  
+```{r}
+chicago<-rename(chicago,dewpoint=dptp,pm25=pm25tmean2)
+head(chicago[,1:5],3)
+```
+#### mutate( )
+Compute transformations of variables in a dataframe.  
+Example: detrend pm25  
+```{r}
+chicago<-mutate(chicago,pm25detrend=pm25-mean(pm25,na.rm=TRUE))
+head(chicago,2)
+```
+*transmute( )* function: same as mutate( ) but then drops all non-transformed variables.  
+```{r}
+head(transmute(chicago,
+               pm10detrend=pm10tmean2-mean(pm10tmean2,na.rm=TRUE),
+               o3detrend=o3tmean2-mean(o3tmean2,na.rm=TRUE)))
+```
+
+#### Group_by( )
+Usually use *summarize( )* function after *group_by( )*.  
+General operation is: split a dataframe into separate pieces defined by a variable/variables, then apply a summary function across those subsets.  
+```{r}
+# add a column 'year' to 'chicago' dataframe
+chicago<-mutate(chicago,year=as.POSIXlt(date)$year+1900)
+# create a separate dataframe that splits the original by year:
+years<-group_by(chicago,year)
+# compute summary statistics for each year in the dataframe:
+summarize(years, pm25=mean(pm25,na.rm=TRUE),
+          o3=max(o3tmean2,na.rm=TRUE),
+          no2=median(no2tmean2,na.rm=TRUE))
+```
+#### %>% Pipeline operator
+Useful for stringing together multiple dplyr functions in a sequence of operations.  
+eg.: *third(second(first(x)))* is equal to *first(x)%>%second%>%third*  
+Example: compute average pollutant level by month.(to see seasonal trends)  
+```{r}
+mutate(chicago, month=as.POSIXlt(date)$mon+1)%>%
+        group_by(month)%>%
+        summarize(pm25 = mean(pm25, na.rm=TRUE),
+                  o3 = max(o3tmean2, na.rm=TRUE),
+                  no2 = median(no2tmean2, na.rm=TRUE))
+```
+
+## Control Structures
+### if-else
+if(condition1){  
+} else if(condition2) {  
+} else {  
+}
+
+### for Loops  
+Note: for one line loops, curly braces are not strictly necessary.  
+**Nested for loops**  
+Commonly for multidimensional or hierarchical data structures.   
+Nesting beyong 2 to 3 levels often troublesome. Break up the loops using functions!  
+**While Loops**  
+Be careful it can be infinite!  
+**Repeat Loops**  
+Initiate an infinite loop from the start, use *break* to exit.  
+Example: searching for a solution and do not stop until close enough.(so you don't know how many loops you need to go through at the beginning.)  
+
+### Next, break  
+*next* is used to skip an iteration of a loop.  
+*break* is used to exit a loop immediately.  
+
+## Split-Apply-Combine Strategy, *Apply Family
+
+* lapply: loop over a list and evaluate a function on each element  
+*Note: split( ) is often used in conjunction with lapply.*
+* sapply: same as lapply but simplified result.   
+* tapply: apply a function over subsets of a vector  
+* mapply: a multivariate version of lappy  
+* apply: apply a function over the margins of an array  
+* vapply: is useful for checking of the output since you can specify the type of the output if the output is not as specified, error will occur (safer command than sapply)   
+
+**Example 1 on lapply and sapply:**  
+```{r}
+# compare this two result:
+lapply(1:3,function(x) x^2)
+sapply(1:3,function(x) x^2)
+# use of '...' argument:
+x<-1:4
+lapply(x,runif,min=0,max=10) #min=0 and max=10 are passed to runif()
+```
+
+**Example 2 on split( ) and sapply( ):**  
+```{r}
+library(datasets)
+# use airquality dataset, split by month, there are 5 months in total(5-9)
+s<-split(airquality,airquality$Month)
+# Then we take column means for Ozone, solar.R, and Wind for each month
+# Remember to remove NA values
+sapply(s,function(x){colMeans(x[,c('Ozone','Solar.R','Wind')],
+                              na.rm=TRUE)})
+
+```
+
+**Example 3 on tapply( ):**  
+*similar to a combination of split() and sapply()*
+```{r}
+x<-c(rnorm(10),runif(10),rnorm(10,1))
+f<-gl(3,10)
+# sapply(split(x,f),mean) is equal to:
+tapply(x,f,mean) # if you want a list, use tapply(x,f,mean,simplify=FALSE)
+# when result is more than a single value, tapply will return a list automatically
+tapply(x,f,range)
+```
+
+**Example 4 on apply():**  
+Often used to rows/columns of a matrix or array.  
+Using apply is not really faster than a loop, but it looks compact.
+```{r}
+x<-matrix(rnorm(200),20,10) # 20 rows and 10 columns
+apply(x,2,mean) # take mean of each column
+apply(x,1,mean) # take mean of each row
+```
+*Or one can use rowSums/rowMeans,colSums/colMeans as shortcuts.*
+
+**Example 5 on mapply():**  
+apply function over multiple R objects. 
+function(FUN, ..., MoreArgs=NULL, SIMPLIFY=TRUE, USE.NAMES=TRUE)  
+Note the argument order is different from others.  
+```{r}
+noise<-function(n,mean,sd){rnorm(n,mean,sd)}
+mapply(noise, 1:5, 1:5, 2) # return 5 sets of random numbers, each with a different length and mean
+```
+
+The above mapply() is the same as:  
+> list(noise(1, 1, 2),noise(2, 2, 2),noise(3, 3, 2),noise(4, 4, 2),noise(5, 5, 2))
+
+
+## Simulation
+### Generating Random Numbers  
+For each probability distribution, there are 4 typical functions:  
+* d for density
+* r for random number generation
+* p for cumulative distribution
+* q for quantile function (inverse cumulative distribution)
+
+### Setting the random number seed  
+This ensures reporducibility of the sequence of random numbers.  
+```{r}
+set.seed(1)
+rnorm(5)
+```
+If I call rnorm(5) again, I will get a different set of random numbers
+```{r}
+rnorm(5)
+```
+But if I call set.seed(1), it gives me back the previous numbers.  
+```{r}
+set.seed(1)
+rnorm(5)
+```
+
